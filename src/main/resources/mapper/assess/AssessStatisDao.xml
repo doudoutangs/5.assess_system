@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.assess.modules.assess.dao.AssessStatisDao" >
+  <resultMap id="BaseResultMap" type="com.assess.modules.assess.entity.AssessStatis" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="assessId" property="assessId" jdbcType="BIGINT" />
+    <result column="approvalScoreSum" property="approvalScoreSum" jdbcType="BIGINT" />
+    <result column="approvalScoreAvg" property="approvalScoreAvg" jdbcType="BIGINT" />
+    <result column="scoreSum" property="scoreSum" jdbcType="BIGINT" />
+    <result column="scoreAvg" property="scoreAvg" jdbcType="BIGINT" />
+  </resultMap>
+  <select id="statis" resultMap="BaseResultMap">
+      select
+          s.id as assessId,
+          #{deptId,jdbcType=BIGINT} as deptId,
+          ifnull(a.approvalScoreSum,0.00) as approvalScoreSum,
+          ifnull(a.approvalScoreAvg,0.00) as approvalScoreAvg,
+          ifnull(a.scoreSum,0.00) as scoreSum,
+          ifnull(a.scoreAvg,0.00) as scoreAvg,
+          s.title as assessTitle,
+          d.name as deptName
+      from
+          (
+              select
+                  assess_id as assessId,
+                  dept_id as deptId,
+                  sum(approval_score)as approvalScoreSum,
+                  CAST(AVG(approval_score) AS DECIMAL(10,2)) as approvalScoreAvg,
+                  sum(score)as scoreSum,
+                  CAST(AVG(score) AS DECIMAL(10,2)) as scoreAvg
+              from (
+                       select d.assess_id,d.approval_score,d.score,u.dept_id
+                       from (
+                                select * from a_assess_declare
+                                where type = 0
+                                  and status in (2,3)
+
+                            ) d
+                                LEFT JOIN sys_user u
+                                          on d.user_id = u.user_id
+                   ) as b
+              where b.dept_id=#{deptId,jdbcType=BIGINT}
+              GROUP by b.assess_id
+          ) a
+              right JOIN a_assess_set s
+                         on s.id= a.assessId
+              LEFT JOIN sys_dept d
+                        on d.dept_id= a.deptId
+  </select>
+</mapper>
